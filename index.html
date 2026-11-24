@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fysikverktyg</title>
+<style>
+  :root { --bg: #f6f3ec; --panel: #fff; --text: #1f2328; --muted: #5d6670; --line: #d9d3c7; --accent: #2f6fd6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #16181c; --panel: #1f2329; --text: #e8eaed; --muted: #a0a8b3; --line: #343a42; --accent: #6ea2ff; }
+  }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 16px; }
+  h1 { margin: 0 0 4px; }
+  p { color: var(--muted); margin: 0 0 20px; }
+  a.card { display: block; padding: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+           color: var(--text); text-decoration: none; margin-bottom: 12px; }
+  a.card:hover { border-color: var(--accent); }
+  a.card b { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Fysikverktyg</h1>
+  <p>Interaktiva verktyg för att utforska fysik.</p>
+  <a class="card" href="gungbrada.html"><b>Gungbräda i jämvikt</b><br>Flytta personer på en gungbräda och se hur moment och krafter avgör om den tippar.</a>
+</main>
+</body>
+</html>

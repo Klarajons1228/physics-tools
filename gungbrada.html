@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gungbräda i jämvikt</title>
+<style>
+  :root {
+    --bg: #f6f3ec; --panel: #ffffff; --text: #1f2328; --muted: #5d6670; --line: #d9d3c7;
+    --sky: #e8f1f7; --ground: #cbbf9f;
+    --wood: #b07a45; --wood-dark: #7d5229; --fulcrum: #6b7380;
+    --pA: #1f8a8a; --pB: #d9762b; --skin: #f1c9a5;
+    --f-grav: #d23c3c; --f-support: #2a9a4a; --warn: #c2410c;
+    --halo: #ffffff; --accent: #2f6fd6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16181c; --panel: #1f2329; --text: #e8eaed; --muted: #a0a8b3; --line: #343a42;
+      --sky: #1c2530; --ground: #4a4232; --wood: #a8733f; --wood-dark: #6e4722; --fulcrum: #8b939e;
+      --f-grav: #ff6b6b; --f-support: #5ad17c; --warn: #ff9a5c;
+      --halo: #1c2530; --accent: #6ea2ff;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #16181c; --panel: #1f2329; --text: #e8eaed; --muted: #a0a8b3; --line: #343a42;
+    --sky: #1c2530; --ground: #4a4232; --wood: #a8733f; --wood-dark: #6e4722; --fulcrum: #8b939e;
+    --f-grav: #ff6b6b; --f-support: #5ad17c; --warn: #ff9a5c;
+    --halo: #1c2530; --accent: #6ea2ff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 16px; }
+  .stage { background: var(--sky); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  svg { display: block; width: 100%; height: auto; touch-action: none; user-select: none; }
+  .person { cursor: grab; outline: none; }
+  .person:focus-visible .figure { filter: drop-shadow(0 0 4px var(--accent)); }
+  .person.dragging { cursor: grabbing; }
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 20px;
+              margin: 16px 0; padding: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+  label.slider { display: grid; gap: 4px; font-size: .95rem; }
+  label.slider span b { font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .buttons { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; grid-column: 1 / -1; }
+  button { font: inherit; font-weight: 600; padding: 10px 18px; border-radius: 10px; border: 2px solid var(--accent);
+           background: var(--accent); color: #fff; cursor: pointer; }
+  button[aria-pressed="true"] { background: transparent; color: var(--accent); }
+  .check { display: flex; gap: 6px; align-items: center; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .card h2 { font-size: 1.05rem; margin: 0 0 8px; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: .95rem; }
+  th, td { padding: 5px 6px; border-bottom: 1px solid var(--line); text-align: right; }
+  th:first-child, td:first-child { text-align: left; color: var(--muted); font-weight: normal; }
+  .status { margin-top: 10px; font-weight: 600; color: var(--f-support); }
+  .status.off { color: var(--warn); }
+  .legend { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; font-size: .95rem; }
+  .legend li { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: baseline; }
+  .legend .sw { width: 18px; height: 4px; border-radius: 2px; align-self: center; }
+  .legend .val { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .hidden { display: none; }
+  .note { color: var(--muted); font-size: .9rem; margin: 10px 0 0; }
+  .lbl { font: 600 13px system-ui, sans-serif; paint-order: stroke; stroke: var(--halo); stroke-width: 4px; stroke-linejoin: round; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Gungbräda i jämvikt</h1>
+  <p class="lead">Dra en person längs brädan (eller markera personen och använd piltangenterna). Är momenten lika stora åt båda hållen är gungbrädan i jämvikt – annars tippar den.</p>
+
+  <div class="stage">
+    <svg id="svg" viewBox="0 0 900 470" aria-label="Gungbräda med två personer">
+      <rect x="0" y="424" width="900" height="46" fill="var(--ground)"/>
+      <polygon id="fulcrum" points="450,314 395,424 505,424" fill="var(--fulcrum)"/>
+      <g id="board"><g id="dims"></g><g id="plank"></g></g>
+      <g id="personA" class="person" tabindex="0" role="slider" aria-label="Alva"><g class="figure"></g></g>
+      <g id="personB" class="person" tabindex="0" role="slider" aria-label="Bo"><g class="figure"></g></g>
+      <g id="forces" class="hidden"></g>
+    </svg>
+  </div>
+
+  <div class="controls">
+    <label class="slider"><span>Alvas massa: <b id="mAv"></b></span>
+      <input id="mA" type="range" min="20" max="120" step="1"></label>
+    <label class="slider"><span>Bos massa: <b id="mBv"></b></span>
+      <input id="mB" type="range" min="20" max="120" step="1"></label>
+    <div class="buttons">
+      <button id="forceBtn" aria-pressed="false">Visa krafter</button>
+      <label class="check"><input id="autoChk" type="checkbox"> Håll jämvikt (den andra flyttar sig automatiskt)</label>
+      <label class="check"><input id="distChk" type="checkbox" checked> Visa avstånd</label>
+      <span id="hint" class="note" style="margin:0" aria-live="polite"></span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Moment kring stödpunkten</h2>
+      <table>
+        <thead><tr><th></th><th style="color:var(--pA)">Alva</th><th style="color:var(--pB)">Bo</th></tr></thead>
+        <tbody>
+          <tr><td>Massa m</td><td id="t-mA"></td><td id="t-mB"></td></tr>
+          <tr><td>Avstånd d till stödpunkten</td><td id="t-dA"></td><td id="t-dB"></td></tr>
+          <tr><td>Tyngdkraft F = m·g</td><td id="t-GA"></td><td id="t-GB"></td></tr>
+          <tr><td>Moment M = F·d</td><td id="t-MA"></td><td id="t-MB"></td></tr>
+        </tbody>
+      </table>
+      <div class="status" id="status" aria-live="polite"></div>
+      <p class="note">g = 9,82 N/kg. Brädans massa försummas.</p>
+    </div>
+
+    <div class="card">
+      <h2>Krafter på brädan</h2>
+      <p class="note" id="legendHint" style="margin-top:0">Tryck på <b>Visa krafter</b> för att rita ut krafterna.</p>
+      <ul class="legend hidden" id="legend">
+        <li><span class="sw" style="background:var(--f-grav)"></span><span><b>F₁, F₂ = m·g</b> – personernas tyngd som trycker på brädan</span><span class="val" id="l-G"></span></li>
+        <li><span class="sw" style="background:var(--f-support)"></span><span><b>F<sub>stöd</sub></b> – motkraften från stödpunkten i brädans mitt</span><span class="val" id="l-F"></span></li>
+      </ul>
+      <div class="status hidden" id="sumStatus"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+(() => {
+  const g = 9.82;
+  const PX = 180;            // pixlar per meter
+  const CX = 450;            // stödpunktens x
+  const PY = 300;            // brädans översida (vågrät)
+  const PT = 14;             // brädans tjocklek
+  const PIVOT_Y = PY + PT;   // stödpunktens spets
+  const GROUND = 424;
+  const HALF = 2.2;          // halva brädans längd (m)
+  const DMIN = 0.25, DMAX = 2.0, SNAP = 0.05;
+  const K = 0.09;            // pixlar per newton för pilarna
+  const MAXANG = Math.asin((GROUND - PIVOT_Y) / (HALF * PX)); // tills änden når marken
+
+  const S = { mA: 60, mB: 40, dA: 0.8, dB: 1.2, show: false, dist: true, auto: false };
+  const V = { dA: S.dA, dB: S.dB, ang: 0 };   // visade (animerade) värden
+  let drag = null;
+
+  const $ = id => document.getElementById(id);
+  const svg = $('svg'), pA = $('personA'), pB = $('personB');
+  const fmt = (v, d = 0) => v.toLocaleString('sv-SE', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const snap = v => Math.round(v / SNAP) * SNAP;
+
+  // Jämvikt: mA·dA = mB·dB
+  function balance(fixed) {
+    if (fixed === 'A') {
+      S.dB = S.mA * S.dA / S.mB;
+      if (S.dB > DMAX) { S.dB = DMAX; S.dA = S.mB * DMAX / S.mA; }
+      if (S.dB < DMIN) { S.dB = DMIN; S.dA = S.mB * DMIN / S.mA; }
+    } else {
+      S.dA = S.mB * S.dB / S.mA;
+      if (S.dA > DMAX) { S.dA = DMAX; S.dB = S.mA * DMAX / S.mB; }
+      if (S.dA < DMIN) { S.dA = DMIN; S.dB = S.mA * DMIN / S.mB; }
+    }
+  }
+  const moments = () => ({ MA: S.mA * g * S.dA, MB: S.mB * g * S.dB });
+  function targetAngle() {
+    const { MA, MB } = moments();
+    if (Math.abs(MA - MB) < 1e-6 * (MA + MB)) return 0;
+    return MA > MB ? -MAXANG : MAXANG;   // negativ = vänster sida ner
+  }
+
+  // Punkt på brädans översida, s meter från stödpunkten (negativt = vänster)
+  function onPlank(s, ang) {
+    const x = s * PX, y = -PT, c = Math.cos(ang), si = Math.sin(ang);
+    return [CX + x * c - y * si, PIVOT_Y + x * si + y * c];
+  }
+
+  // --- Ritfunktioner ---
+  const scaleFor = m => 0.7 + (m - 20) / 100 * 0.6;
+  function figure(m, color, name, facing) {
+    const s = scaleFor(m), w = 0.85 + (m - 20) / 100 * 0.5;
+    return `<g transform="scale(${s})">
+      <rect x="${-9*w}" y="-44" width="${7*w}" height="44" rx="3" fill="var(--text)" opacity=".8"/>
+      <rect x="${2*w}" y="-44" width="${7*w}" height="44" rx="3" fill="var(--text)" opacity=".8"/>
+      <rect x="${-14*w}" y="-82" width="${28*w}" height="44" rx="10" fill="${color}"/>
+      <circle cx="0" cy="-95" r="13" fill="var(--skin)"/>
+      <circle cx="${facing*5}" cy="-97" r="1.8" fill="#333"/>
+      <path d="M -13 -101 Q 0 -116 13 -101" fill="${color}" opacity=".9"/>
+    </g>
+    <text x="0" y="${-118*s - 8}" text-anchor="middle" class="lbl" fill="${color}">${name} · ${m} kg</text>`;
+  }
+  function drawPlank() {
+    let ticks = '';
+    for (let d = -2; d <= 2.001; d += 0.5) {
+      const x = CX + d * PX;
+      ticks += `<line x1="${x}" y1="${PY+PT-4}" x2="${x}" y2="${PY+PT}" stroke="var(--wood-dark)" stroke-width="1.5"/>`;
+    }
+    $('plank').innerHTML =
+      `<rect x="${CX - HALF*PX}" y="${PY}" width="${2*HALF*PX}" height="${PT}" rx="4" fill="var(--wood)" stroke="var(--wood-dark)" stroke-width="1.5"/>` + ticks;
+  }
+  function drawPeople() {
+    pA.querySelector('.figure').innerHTML = figure(S.mA, 'var(--pA)', 'Alva', 1);
+    pB.querySelector('.figure').innerHTML = figure(S.mB, 'var(--pB)', 'Bo', -1);
+  }
+  function arrow(x1, y1, x2, y2, color, label, lx, ly, anchor) {
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy);
+    if (L < 1) return '';
+    const ux = dx / L, uy = dy / L, h = Math.min(12, L * 0.6), w = 6.5;
+    const bx = x2 - ux * h, by = y2 - uy * h;
+    return `<line x1="${x1}" y1="${y1}" x2="${bx}" y2="${by}" stroke="${color}" stroke-width="4" stroke-linecap="round"/>
+      <polygon points="${x2},${y2} ${bx - uy*w},${by + ux*w} ${bx + uy*w},${by - ux*w}" fill="${color}"/>
+      <circle cx="${x1}" cy="${y1}" r="4" fill="${color}"/>
+      <text x="${lx}" y="${ly}" text-anchor="${anchor}" class="lbl" fill="${color}">${label}</text>`;
+  }
+  function drawDims() {
+    if (!S.dist) { $('dims').innerHTML = ''; return; }
+    const y = PY + PT + 24;
+    const seg = (x1, x2, label, color) => `
+      <line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${color}" stroke-width="2" stroke-dasharray="5 4"/>
+      <line x1="${x1}" y1="${y-6}" x2="${x1}" y2="${y+6}" stroke="${color}" stroke-width="2"/>
+      <line x1="${x2}" y1="${y-6}" x2="${x2}" y2="${y+6}" stroke="${color}" stroke-width="2"/>
+      <text x="${(x1+x2)/2}" y="${y + 22}" text-anchor="middle" class="lbl" fill="${color}">${label}</text>`;
+    $('dims').innerHTML =
+      seg(CX - V.dA*PX, CX, `d₁ = ${fmt(S.dA, 2)} m`, 'var(--pA)') +
+      seg(CX, CX + V.dB*PX, `d₂ = ${fmt(S.dB, 2)} m`, 'var(--pB)');
+  }
+
+  // Ritar allt som beror på position/vinkel (körs varje bildruta)
+  function render() {
+    const a = V.ang;
+    $('board').setAttribute('transform', `rotate(${a * 180 / Math.PI} ${CX} ${PIVOT_Y})`);
+    const [xA, yA] = onPlank(-V.dA, a), [xB, yB] = onPlank(V.dB, a);
+    pA.setAttribute('transform', `translate(${xA} ${yA})`);
+    pB.setAttribute('transform', `translate(${xB} ${yB})`);
+    drawDims();
+    $('forces').classList.toggle('hidden', !S.show);
+    $('fulcrum').style.opacity = S.show ? .5 : 1;
+    if (S.show) {
+      const GA = S.mA * g, GB = S.mB * g, F = GA + GB;
+      $('forces').innerHTML =
+        arrow(xA, yA, xA, yA + GA*K, 'var(--f-grav)', `F₁ = m₁g = ${fmt(GA)} N`, xA - 10, yA + GA*K + 4, 'end') +
+        arrow(xB, yB, xB, yB + GB*K, 'var(--f-grav)', `F₂ = m₂g = ${fmt(GB)} N`, xB + 10, yB + GB*K + 4, 'start') +
+        arrow(CX, PIVOT_Y, CX, PIVOT_Y - F*K, 'var(--f-support)', `F_stöd = ${fmt(F)} N`, CX + 10, PIVOT_Y - F*K + 8, 'start');
+    }
+  }
+
+  function updateText() {
+    const GA = S.mA * g, GB = S.mB * g, { MA, MB } = moments();
+    $('mAv').textContent = `${S.mA} kg`; $('mBv').textContent = `${S.mB} kg`;
+    $('t-mA').textContent = `${S.mA} kg`; $('t-mB').textContent = `${S.mB} kg`;
+    $('t-dA').textContent = `${fmt(S.dA, 2)} m`; $('t-dB').textContent = `${fmt(S.dB, 2)} m`;
+    $('t-GA').textContent = `${fmt(GA)} N`; $('t-GB').textContent = `${fmt(GB)} N`;
+    $('t-MA').textContent = `${fmt(MA)} Nm`; $('t-MB').textContent = `${fmt(MB)} Nm`;
+    pA.setAttribute('aria-valuetext', `${fmt(S.dA, 2)} meter från stödpunkten`);
+    pB.setAttribute('aria-valuetext', `${fmt(S.dB, 2)} meter från stödpunkten`);
+    const st = $('status'), ang = targetAngle();
+    st.classList.toggle('off', ang !== 0);
+    st.textContent = ang === 0
+      ? `Moment moturs (${fmt(MA)} Nm) = moment medurs (${fmt(MB)} Nm) ✔ jämvikt`
+      : MA > MB
+        ? `Moment moturs (${fmt(MA)} Nm) > moment medurs (${fmt(MB)} Nm) → brädan tippar åt Alvas håll`
+        : `Moment medurs (${fmt(MB)} Nm) > moment moturs (${fmt(MA)} Nm) → brädan tippar åt Bos håll`;
+    $('legend').classList.toggle('hidden', !S.show);
+    $('legendHint').classList.toggle('hidden', S.show);
+    $('sumStatus').classList.toggle('hidden', !S.show);
+    $('l-G').textContent = `${fmt(GA)} / ${fmt(GB)} N`;
+    $('l-F').textContent = `${fmt(GA + GB)} N`;
+    $('sumStatus').textContent = `F_stöd = F₁ + F₂ = ${fmt(GA + GB)} N – krafterna är desamma oavsett var personerna sitter. Det är momenten som avgör om brädan tippar.`;
+  }
+
+  // Animationsloop: glid mot målvärdena
+  function tick() {
+    if (drag !== 'A') V.dA += (S.dA - V.dA) * 0.2;
+    if (drag !== 'B') V.dB += (S.dB - V.dB) * 0.2;
+    V.ang += (targetAngle() - V.ang) * 0.07;
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  // --- Flytta personer ---
+  function moveTo(who, d, exact) {
+    const want = clamp(exact ? d : snap(d), DMIN, DMAX);
+    if (who === 'A') S.dA = want; else S.dB = want;
+    let msg = '';
+    if (S.auto) {
+      balance(who);
+      const got = who === 'A' ? S.dA : S.dB, other = who === 'A' ? 'Bo' : 'Alva';
+      if (Math.abs(got - want) > 0.005)
+        msg = got < want ? `Längre ut går inte – då skulle ${other} behöva sitta utanför brädan.`
+                         : `Längre in går inte – då skulle ${other} hamna på stödpunkten.`;
+    }
+    if (drag === who) { if (who === 'A') V.dA = S.dA; else V.dB = S.dB; }
+    $('hint').textContent = msg;
+    updateText();
+  }
+  function svgX(evt) {
+    const pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse()).x;
+  }
+  [[pA, 'A'], [pB, 'B']].forEach(([el, who]) => {
+    el.addEventListener('pointerdown', e => {
+      drag = who; el.classList.add('dragging');
+      try { svg.setPointerCapture(e.pointerId); } catch (_) {}
+      el.focus(); e.preventDefault();
+    });
+    el.addEventListener('keydown', e => {
+      const step = e.shiftKey ? 0.25 : SNAP;
+      let dir = 0;
+      if (e.key === 'ArrowLeft') dir = who === 'A' ? 1 : -1;
+      if (e.key === 'ArrowRight') dir = who === 'A' ? -1 : 1;
+      if (!dir) return;
+      e.preventDefault();
+      moveTo(who, (who === 'A' ? S.dA : S.dB) + dir * step);
+    });
+  });
+  svg.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dist = Math.abs(svgX(e) - CX) / (PX * Math.cos(V.ang));
+    const side = svgX(e) < CX ? 'A' : 'B';
+    moveTo(drag, side === drag ? dist : DMIN);
+  });
+  const endDrag = () => { if (!drag) return; (drag === 'A' ? pA : pB).classList.remove('dragging'); drag = null; };
+  svg.addEventListener('pointerup', endDrag);
+  svg.addEventListener('pointercancel', endDrag);
+
+  // --- Reglage ---
+  ['mA', 'mB'].forEach(k => {
+    const inp = $(k); inp.value = S[k];
+    inp.addEventListener('input', () => {
+      S[k] = +inp.value;
+      if (S.auto) balance(k === 'mA' ? 'A' : 'B');
+      drawPeople(); updateText();
+    });
+  });
+  $('forceBtn').addEventListener('click', () => {
+    S.show = !S.show;
+    $('forceBtn').setAttribute('aria-pressed', S.show);
+    $('forceBtn').textContent = S.show ? 'Dölj krafter' : 'Visa krafter';
+    updateText();
+  });
+  $('autoChk').addEventListener('change', e => {
+    S.auto = e.target.checked;
+    if (S.auto) balance('A');
+    $('hint').textContent = '';
+    updateText();
+  });
+  $('distChk').addEventListener('change', e => { S.dist = e.target.checked; });
+
+  drawPlank(); drawPeople(); updateText(); tick();
+})();
+</script>
+</body>
+</html>
