@@ -62,8 +62,21 @@
   .legend .val { font-variant-numeric: tabular-nums; font-weight: 600; }
   .hidden { display: none; }
   .note { color: var(--muted); font-size: .9rem; margin: 10px 0 0; }
+  button.secondary { background: transparent; color: var(--accent); }
+  html.embed main { padding: 4px 0 8px; }
+  html.embed h1, html.embed .lead { display: none; }
+  html.embed:not(:fullscreen) body { background: transparent; }
+  html:fullscreen main { padding-top: 24px; }
   .lbl { font: 600 13px system-ui, sans-serif; paint-order: stroke; stroke: var(--halo); stroke-width: 4px; stroke-linejoin: round; }
 </style>
+<script>
+  // ?embed=1 = inbäddat läge (utan rubrik), ?theme=light|dark = lås färgtema
+  (() => {
+    const p = new URLSearchParams(location.search), t = p.get('theme');
+    if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    if (p.has('embed')) document.documentElement.classList.add('embed');
+  })();
+</script>
 </head>
 <body>
 <main>
@@ -88,6 +101,7 @@
       <input id="mB" type="range" min="20" max="120" step="1"></label>
     <div class="buttons">
       <button id="forceBtn" aria-pressed="false">Visa krafter</button>
+      <button id="fsBtn" type="button" class="secondary">⛶ Helskärm</button>
       <label class="check"><input id="autoChk" type="checkbox"> Håll jämvikt (den andra flyttar sig automatiskt)</label>
       <label class="check"><input id="distChk" type="checkbox" checked> Visa avstånd</label>
       <span id="hint" class="note" style="margin:0" aria-live="polite"></span>
@@ -341,6 +355,26 @@
     updateText();
   });
   $('distChk').addEventListener('change', e => { S.dist = e.target.checked; });
+
+  // --- Helskärm ---
+  const fsBtn = $('fsBtn'), root = document.documentElement;
+  const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement;
+  if (!(document.fullscreenEnabled || document.webkitFullscreenEnabled)) fsBtn.hidden = true;
+  fsBtn.addEventListener('click', () => {
+    if (fsElement()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else (root.requestFullscreen || root.webkitRequestFullscreen).call(root);
+  });
+  const onFs = () => { fsBtn.textContent = fsElement() ? '✕ Avsluta helskärm' : '⛶ Helskärm'; };
+  document.addEventListener('fullscreenchange', onFs);
+  document.addEventListener('webkitfullscreenchange', onFs);
+
+  // --- Inbäddad: berätta för hemsidan hur hög sidan är, så iframen får rätt höjd ---
+  if (window.parent !== window) {
+    const main = document.querySelector('main');
+    const send = () => parent.postMessage({ type: 'gb-height', height: Math.ceil(main.getBoundingClientRect().height) }, '*');
+    new ResizeObserver(send).observe(main);
+    window.addEventListener('load', send);
+  }
 
   drawPlank(); drawPeople(); updateText(); tick();
 })();

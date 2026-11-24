@@ -1,0 +1,32 @@
+<div class="gb-embed">
+  <div class="gb-head">
+    <div>
+      <h3 class="gb-title">Gungbräda i jämvikt</h3>
+      <p class="gb-sub">Dra personerna längs brädan – när momenten inte är lika stora tippar den.</p>
+    </div>
+    <a class="gb-btn" href="https://klarajons1228.github.io/physics-tools/gungbrada.html" target="_blank" rel="noopener">Öppna i eget fönster ↗</a>
+  </div>
+  <iframe class="gb-frame" src="https://klarajons1228.github.io/physics-tools/gungbrada.html?embed=1&theme=light" title="Gungbräda i jämvikt" allow="fullscreen" loading="lazy"></iframe>
+</div>
+<style>
+  /* Ändra färgerna här så de matchar din hemsida */
+  .gb-embed { --gb-accent: #1f2328; --gb-bg: #f6f3ec; --gb-line: #e3ded4;
+              background: var(--gb-bg); border: 1px solid var(--gb-line); border-radius: 18px; padding: 20px; color: #1f2328; }
+  .gb-head { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .gb-title { margin: 0 !important; font-size: 1.4rem; line-height: 1.2; }
+  .gb-sub { margin: 6px 0 0 !important; opacity: .75; font-size: .95rem; }
+  .gb-btn { display: inline-block; padding: 12px 22px; border-radius: 999px; background: var(--gb-accent);
+            color: #fff !important; text-decoration: none !important; font-weight: 600; white-space: nowrap; }
+  .gb-btn:hover { opacity: .85; }
+  .gb-frame { display: block; width: 100%; height: 1000px; border: 0; }
+  @media (max-width: 600px) { .gb-embed { padding: 12px; } .gb-btn { width: 100%; text-align: center; } }
+</style>
+<script>
+  // Låter verktyget själv tala om hur högt det är, så att ramen aldrig får rullist eller tomrum
+  window.addEventListener('message', function (e) {
+    if (e.origin !== 'https://klarajons1228.github.io' || !e.data || e.data.type !== 'gb-height') return;
+    document.querySelectorAll('.gb-frame').forEach(function (f) {
+      if (f.contentWindow === e.source) f.style.height = e.data.height + 'px';
+    });
+  });
+</script>
