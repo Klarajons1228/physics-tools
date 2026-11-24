@@ -17,7 +17,7 @@ Lägg till ett **Code-block** och klistra in koden nedan (finns även i `squares
     </div>
     <a class="gb-btn" href="https://klarajons1228.github.io/physics-tools/gungbrada.html" target="_blank" rel="noopener">Öppna i eget fönster ↗</a>
   </div>
-  <iframe class="gb-frame" src="https://klarajons1228.github.io/physics-tools/gungbrada.html?embed=1&theme=light" title="Gungbräda i jämvikt" allow="fullscreen" loading="lazy"></iframe>
+  <iframe class="gb-frame" src="https://klarajons1228.github.io/physics-tools/gungbrada.html?embed=1&theme=light" title="Gungbräda i jämvikt" allow="fullscreen"></iframe>
 </div>
 <style>
   /* Ändra färgerna här så de matchar din hemsida */
